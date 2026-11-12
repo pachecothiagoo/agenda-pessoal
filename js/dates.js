@@ -1,43 +1,69 @@
-const pad = (n) => String(n).padStart(2, "0");
+const pad = (value) => String(value).padStart(2, "0");
+
 export function localISODate(date = new Date()) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
+
+export function dateFromISO(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function isISODate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return false;
+  return localISODate(dateFromISO(value)) === value;
+}
+
 export function addDays(date, amount) {
   const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   result.setDate(result.getDate() + amount);
   return result;
 }
+
+export function addMonths(date, amount) {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+export function startOfWeek(date) {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysSinceMonday = (result.getDay() + 6) % 7;
+  result.setDate(result.getDate() - daysSinceMonday);
+  return result;
+}
+
 export function dayDistance(dateString) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const target = Date.UTC(year, month - 1, day);
+  const target = dateFromISO(dateString);
   const today = new Date();
-  const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((target - start) / 86400000);
+  const targetUTC = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((targetUTC - todayUTC) / 86400000);
 }
+
 export function formatDate(dateString, options = { weekday: "short", day: "numeric", month: "short" }) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Intl.DateTimeFormat("pt-BR", options).format(new Date(year, month - 1, day));
+  if (!isISODate(dateString)) return "Data inválida";
+  return new Intl.DateTimeFormat("pt-BR", options).format(dateFromISO(dateString));
 }
+
+export function monthTitle(date) {
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date);
+}
+
 export function alertInfo(dateString) {
   const days = dayDistance(dateString);
-  if (days < 0) return { days, label: `${Math.abs(days)} dia${Math.abs(days) === 1 ? "" : "s"} vencido`, tone: "rose", rank: 0 };
-  if (days === 0) return { days, label: "É hoje", tone: "rose", rank: 1 };
-  if (days === 1) return { days, label: "Amanhã", tone: "rose", rank: 2 };
-  if (days <= 2) return { days, label: `Em ${days} dias`, tone: "rose", rank: 3 };
-  if (days <= 7) return { days, label: days === 7 ? "Falta 1 semana" : `Em ${days} dias`, tone: "orange", rank: 4 };
-  if (days <= 14) return { days, label: days === 14 ? "Faltam 2 semanas" : `Em ${days} dias`, tone: "orange", rank: 5 };
-  if (days <= 30) return { days, label: days === 30 ? "Falta 1 mês" : `Em ${days} dias`, tone: "amber", rank: 6 };
+  if (days < 0) return { days, label: `${Math.abs(days)} dia${Math.abs(days) === 1 ? "" : "s"} vencido`, tone: "rose" };
+  if (days === 0) return { days, label: "Hoje", tone: "rose" };
+  if (days === 1) return { days, label: "Amanhã", tone: "rose" };
+  if (days <= 2) return { days, label: `Em ${days} dias`, tone: "rose" };
+  if (days <= 7) return { days, label: days === 7 ? "Falta 1 semana" : `Em ${days} dias`, tone: "orange" };
+  if (days <= 14) return { days, label: days === 14 ? "Faltam 2 semanas" : `Em ${days} dias`, tone: "orange" };
+  if (days <= 30) return { days, label: days === 30 ? "Falta 1 mês" : `Em ${days} dias`, tone: "amber" };
   return null;
 }
 
-// Parser intencionalmente simples: suporta hoje/amanhã/depois de amanhã e datas D/M[/AAAA].
-// Retorna null quando não encontra uma data inequívoca, sem inventar um dia.
-export function parseQuickEntry(input) {
-  const text = input.trim();
+export function parseQuickEntry(input, now = new Date()) {
+  let text = String(input || "").trim();
   if (!text) return null;
-  const now = new Date();
   let date = null;
-  let match;
   const relative = /(depois de amanh[ãa]|amanh[ãa]|hoje)/i.exec(text);
   if (relative) {
     const phrase = relative[1].toLocaleLowerCase("pt-BR");
@@ -45,11 +71,10 @@ export function parseQuickEntry(input) {
     date = addDays(now, offset);
     text = text.replace(relative[0], " ");
   } else {
-    match = /\bdia\s+(\d{1,2})(?:[\/.-](\d{1,2}))?(?:[\/.-](\d{2,4}))?\b/i.exec(text)
-      || /\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/.exec(text);
+    let match = /\bdia\s+(\d{1,2})(?:[\/.-](\d{1,2}))?(?:[\/.-](\d{2,4}))?\b/i.exec(text);
+    let hasDayPrefix = Boolean(match);
+    if (!match) match = /\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/.exec(text);
     if (match) {
-      // `dia 14` usa o mês atual; se a data já passou, assume o próximo mês.
-      const hasDayPrefix = /^dia/i.test(match[0]);
       const day = Number(match[1]);
       let month = match[2] ? Number(match[2]) : now.getMonth() + 1;
       let year = match[3] ? Number(match[3]) : now.getFullYear();
@@ -64,17 +89,22 @@ export function parseQuickEntry(input) {
       text = text.replace(match[0], " ");
     }
   }
-  if (!date) return null;
+  if (!date || Number.isNaN(date.getTime())) return null;
+
   const timeMatch = /\b(?:às?\s*)?(\d{1,2})(?:\s*(?:h|hr|hrs|:)(\d{2})?)\b/i.exec(text);
   let time = "";
   if (timeMatch) {
     const hour = Number(timeMatch[1]);
     const minute = Number(timeMatch[2] || 0);
     if (hour > 23 || minute > 59) return null;
-    time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    time = `${pad(hour)}:${pad(minute)}`;
     text = text.replace(timeMatch[0], " ");
   }
-  const title = text.replace(/\b(tenho|temos|marcar|agendar|compromisso)\b/gi, " ")
-    .replace(/[,:;.!?]+/g, " ").replace(/\s+/g, " ").trim();
-  return { title: title || "Compromisso", date: localISODate(date), time };
+  const title = text
+    .replace(/\b(tenho|temos|marcar|agendar|compromisso)\b/gi, " ")
+    .replace(/(^|\s)às(?=\s|$)/gi, " ")
+    .replace(/[,:;.!?]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { title: title || "Compromisso", date: localISODate(date), time, duration: 60, category: "Pessoal", notes: "" };
 }

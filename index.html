@@ -1,37 +1,133 @@
 <!doctype html>
-<html lang="pt-BR" class="h-full">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f8fafc" />
-  <title>Agenda — seu espaço pessoal</title>
+  <meta name="theme-color" content="#f6f7f2" />
+  <meta name="description" content="Uma agenda pessoal simples, cuidadosa e sincronizada." />
+  <title>Raiz — agenda pessoal</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/raiz-mark.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] } } } };</script>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>body{font-family:'DM Sans',sans-serif} ::selection{background:#c7d2fe}.hide-scrollbar::-webkit-scrollbar{display:none} .toast-in{animation:toast .2s ease-out}@keyframes toast{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}</style>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-<body class="h-full bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-  <main id="auth-view" class="hidden min-h-screen items-center justify-center px-4 py-12">
-    <section class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
-      <div class="mb-8 flex items-center gap-3"><div class="grid h-11 w-11 place-items-center rounded-2xl bg-indigo-600 text-xl text-white">✦</div><div><p class="text-xs font-semibold uppercase tracking-[.2em] text-indigo-600">Seu espaço</p><h1 class="text-xl font-bold">Agenda pessoal</h1></div></div>
-      <div class="mb-6 grid grid-cols-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"><button id="login-tab" class="rounded-lg bg-white px-3 py-2 text-sm font-semibold shadow-sm dark:bg-slate-700">Entrar</button><button id="signup-tab" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-500">Criar conta</button></div>
-      <form id="auth-form" class="space-y-4"><label class="block text-sm font-medium">E-mail<input id="auth-email" type="email" autocomplete="email" required class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-950"></label><label class="block text-sm font-medium">Senha<input id="auth-password" type="password" minlength="6" autocomplete="current-password" required class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-950"></label><p id="auth-error" class="hidden text-sm text-rose-600"></p><button id="auth-submit" class="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60">Entrar na agenda</button></form>
-      <p class="mt-6 text-center text-xs leading-5 text-slate-500">Seus dados ficam protegidos por autenticação e regras individuais no Firestore.</p>
+<body>
+  <div id="boot-screen" class="boot-screen" role="status">
+    <img src="./assets/raiz-mark.svg" alt="" width="42" height="42" />
+    <div><strong>Raiz</strong><span id="boot-message">Abrindo sua agenda…</span></div>
+  </div>
+
+  <main id="auth-view" class="auth-view is-hidden">
+    <section class="auth-card">
+      <a class="brand brand-auth" href="#calendar-container" aria-label="Raiz, página inicial">
+        <img src="./assets/raiz-mark.svg" alt="" width="46" height="46" />
+        <span><strong>raiz</strong><small>AGENDA PESSOAL</small></span>
+      </a>
+      <p class="eyebrow">Seu tempo, do seu jeito</p>
+      <h1 id="auth-heading">Que bom ter você de volta.</h1>
+      <p class="auth-intro">Entre para ver seus planos e compromissos, em qualquer lugar.</p>
+      <div class="auth-tabs" role="tablist" aria-label="Acesso à agenda">
+        <button id="login-tab" class="auth-tab is-selected" type="button" role="tab" aria-selected="true">Entrar</button>
+        <button id="signup-tab" class="auth-tab" type="button" role="tab" aria-selected="false">Criar conta</button>
+      </div>
+      <form id="auth-form" class="form-stack">
+        <label class="field-label" for="auth-email">E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="voce@exemplo.com" required /></label>
+        <label class="field-label" for="auth-password">Senha<input id="auth-password" type="password" minlength="6" autocomplete="current-password" placeholder="Pelo menos 6 caracteres" required /></label>
+        <p id="auth-error" class="form-error" role="alert" hidden></p>
+        <button id="auth-submit" class="button button-primary button-full" type="submit">Entrar na agenda</button>
+      </form>
+      <p class="privacy-note">Seus compromissos são privados e vinculados à sua conta.</p>
     </section>
+    <aside class="auth-aside" aria-label="Sobre a agenda">
+      <div class="auth-aside-copy"><span>Um lugar para organizar o que importa.</span><p>Menos correria. Mais presença no seu dia.</p></div>
+      <div class="sunlight-shape" aria-hidden="true"></div>
+      <span class="auth-aside-caption">PLANEJE COM CALMA · VIVA COM INTENÇÃO</span>
+    </aside>
   </main>
 
-  <div id="app-view" class="hidden min-h-screen">
-    <header class="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80"><div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"><div class="flex items-center gap-3"><div class="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-600 text-lg text-white">✦</div><div><h1 class="font-bold tracking-tight">Agenda pessoal</h1><p id="today-label" class="text-xs text-slate-500"></p></div></div><div class="flex items-center gap-2"><span id="user-label" class="hidden max-w-40 truncate text-sm text-slate-500 sm:block"></span><button id="theme-toggle" aria-label="Alternar tema" class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">◐</button><button id="signout-button" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">Sair</button></div></div></header>
-    <div class="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-      <section class="mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 p-6 text-white shadow-lg shadow-indigo-900/10 sm:p-8"><div class="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><p class="text-sm font-medium text-indigo-100">Entrada rápida</p><h2 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Tire da cabeça. Coloque na agenda.</h2></div><span class="text-xs text-indigo-100">Ex.: Amanhã reunião às 14h</span></div><form id="quick-form" class="flex flex-col gap-2 sm:flex-row"><input id="quick-input" required placeholder="Ex.: Consulta médica dia 25/11 às 15:00" class="min-w-0 flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-indigo-100 focus:bg-white/15 focus:ring-2 focus:ring-white/50"><button class="rounded-xl bg-white px-5 py-3 font-semibold text-indigo-700 transition hover:bg-indigo-50">Adicionar <span aria-hidden="true">↗</span></button></form><p id="quick-feedback" aria-live="polite" class="mt-3 hidden rounded-lg bg-white/10 px-3 py-2 text-sm"></p></section>
-      <section class="mb-7"><div class="mb-3 flex items-end justify-between"><div><p class="text-xs font-semibold uppercase tracking-[.18em] text-rose-600">Fique de olho</p><h2 class="mt-1 text-xl font-bold">Alertas e prazos</h2></div><span id="alert-count" class="text-sm text-slate-500"></span></div><div id="alerts" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div></section>
-      <section><div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[.18em] text-indigo-600">Visão geral</p><h2 class="mt-1 text-xl font-bold">Seus compromissos</h2></div><div class="flex items-center gap-2"><label for="filter-select" class="sr-only">Filtrar compromissos</label><select id="filter-select" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"><option value="upcoming">Próximos</option><option value="all">Todos</option><option value="done">Concluídos</option></select><span id="event-count" class="text-sm text-slate-500"></span></div></div><div id="event-list" class="grid gap-3 md:grid-cols-2"></div><div id="empty-state" class="hidden rounded-2xl border border-dashed border-slate-300 px-6 py-14 text-center dark:border-slate-700"><div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-indigo-50 text-xl text-indigo-600 dark:bg-indigo-950">＋</div><h3 class="mt-4 font-semibold">Sua agenda está livre</h3><p class="mt-1 text-sm text-slate-500">Adicione um compromisso pela entrada rápida acima.</p></div></section>
-      <footer class="mt-12 border-t border-slate-200 py-5 text-xs text-slate-400 dark:border-slate-800">Agenda pessoal · Sincronizada com sua conta</footer>
-    </div>
+  <div id="app-view" class="app-shell is-hidden">
+    <aside class="sidebar">
+      <a class="brand sidebar-brand" href="#calendar-container" aria-label="Raiz, início"><img src="./assets/raiz-mark.svg" alt="" width="40" height="40" /><span><strong>raiz</strong><small>AGENDA PESSOAL</small></span></a>
+      <button id="new-event-button" class="button button-primary new-event-button" type="button"><span class="plus-mark" aria-hidden="true">+</span> Novo compromisso</button>
+      <nav class="side-nav" aria-label="Navegação">
+        <a class="nav-link is-active" href="#calendar-container" aria-current="page"><span class="nav-icon" aria-hidden="true">▦</span> Calendário</a>
+        <button id="sidebar-today" class="nav-link" type="button"><span class="nav-icon nav-today-icon" aria-hidden="true">◷</span> Hoje</button>
+      </nav>
+      <div class="sidebar-rule"></div>
+      <section class="upcoming-section" aria-labelledby="upcoming-heading">
+        <div class="section-heading-row"><h2 id="upcoming-heading">A seguir</h2><span id="upcoming-count" class="subtle-count"></span></div>
+        <div id="upcoming-list" class="upcoming-list"></div>
+      </section>
+      <div class="sidebar-bottom">
+        <div class="user-chip"><span class="avatar-mark" aria-hidden="true">R</span><span id="user-label" class="user-email"></span></div>
+        <div class="sidebar-actions"><button id="theme-toggle" class="icon-button" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button><button id="signout-button" class="text-button" type="button">Sair</button></div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="page-heading">
+        <div><p id="today-label" class="eyebrow"></p><h1>Um dia de cada vez.</h1><p class="page-subtitle">Seus planos, organizados com leveza.</p></div>
+        <button id="mobile-new-event" class="button button-primary mobile-new-event" type="button"><span aria-hidden="true">+</span> Novo</button>
+      </header>
+
+      <form id="quick-form" class="quick-entry" autocomplete="off">
+        <span class="quick-entry-mark" aria-hidden="true">✳</span>
+        <label for="quick-input" class="sr-only">Descreva um compromisso</label>
+        <input id="quick-input" placeholder="Experimente: amanhã reunião às 14h" />
+        <button class="quick-submit" type="submit">Adicionar <span aria-hidden="true">↗</span></button>
+      </form>
+      <p id="quick-feedback" class="quick-feedback" aria-live="polite" hidden></p>
+
+      <section class="calendar-section" aria-label="Calendário de compromissos">
+        <div class="calendar-toolbar">
+          <div class="period-controls"><button id="previous-period" class="icon-button period-arrow" type="button" aria-label="Período anterior">‹</button><button id="next-period" class="icon-button period-arrow" type="button" aria-label="Próximo período">›</button><button id="today-button" class="button button-outline today-button" type="button">Hoje</button><h2 id="calendar-title" class="calendar-title"></h2></div>
+          <div class="view-switch" role="group" aria-label="Visualização do calendário">
+            <button type="button" data-view="month" class="view-button is-selected">Mês</button><button type="button" data-view="week" class="view-button">Semana</button><button type="button" data-view="day" class="view-button">Dia</button><button type="button" data-view="list" class="view-button">Lista</button>
+          </div>
+        </div>
+        <div class="calendar-filter-row">
+          <label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Buscar compromissos</span><input id="search-input" type="search" placeholder="Buscar na agenda" /></label>
+          <label class="filter-control"><span>Categoria</span><select id="category-filter"><option value="all">Todas</option><option>Pessoal</option><option>Trabalho</option><option>Saúde</option><option>Estudos</option><option>Família</option><option>Outro</option></select></label>
+          <label class="filter-control"><span>Status</span><select id="status-filter"><option value="open">Em aberto</option><option value="all">Todos</option><option value="done">Concluídos</option></select></label>
+          <span id="results-summary" class="results-summary" aria-live="polite"></span>
+        </div>
+        <div id="calendar-container" class="calendar-frame"></div>
+      </section>
+      <footer class="page-footer"><span>Feito para caber na vida real.</span><span id="sync-status" class="sync-status"><i></i> Sincronizado</span></footer>
+    </main>
   </div>
-  <div id="toast-region" class="fixed bottom-4 right-4 z-50 space-y-2" aria-live="polite"></div>
-  <dialog id="edit-dialog" class="w-[calc(100%-2rem)] max-w-md rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"><form id="edit-form" class="space-y-4 p-6"><div><h2 class="text-lg font-bold">Editar compromisso</h2><p class="text-sm text-slate-500">Atualize os detalhes da sua agenda.</p></div><input id="edit-title" required maxlength="160" placeholder="Título" class="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><div class="grid grid-cols-2 gap-3"><label class="text-sm">Data<input id="edit-date" type="date" required class="mt-1 block w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"></label><label class="text-sm">Horário<input id="edit-time" type="time" class="mt-1 block w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"></label></div><div class="flex justify-end gap-2"><button type="button" id="edit-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-sm dark:border-slate-700">Cancelar</button><button class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Salvar alterações</button></div></form></dialog>
+
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog id="event-dialog" class="dialog-card">
+    <form id="event-form" class="dialog-form">
+      <div class="dialog-heading"><div><p class="eyebrow">NA SUA AGENDA</p><h2 id="event-dialog-title">Novo compromisso</h2></div><button type="button" class="icon-button dialog-close" data-close-dialog="event-dialog" aria-label="Fechar">×</button></div>
+      <label class="field-label" for="event-title">O que você vai fazer?<input id="event-title" name="title" maxlength="160" placeholder="Ex.: Alinhamento com a equipe" required /></label>
+      <div class="form-row"><label class="field-label" for="event-date">Data<input id="event-date" name="date" type="date" required /></label><label class="field-label" for="event-time">Horário<input id="event-time" name="time" type="time" /></label></div>
+      <div class="form-row"><label class="field-label" for="event-duration">Duração<select id="event-duration" name="duration"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="90">1 hora e 30</option><option value="120">2 horas</option><option value="240">Meio período</option></select></label><label class="field-label" for="event-category">Categoria<select id="event-category" name="category"><option value="Pessoal">Pessoal</option><option value="Trabalho">Trabalho</option><option value="Saúde">Saúde</option><option value="Estudos">Estudos</option><option value="Família">Família</option><option value="Outro">Outro</option></select></label></div>
+      <label class="field-label" for="event-notes">Observações <span class="optional-label">opcional</span><textarea id="event-notes" name="notes" rows="3" maxlength="1000" placeholder="Um detalhe para lembrar depois"></textarea></label>
+      <p id="event-form-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button type="button" class="button button-outline" data-close-dialog="event-dialog">Cancelar</button><button id="event-save" class="button button-primary" type="submit">Salvar compromisso</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="details-dialog" class="dialog-card details-dialog">
+    <div class="dialog-form"><div class="dialog-heading"><div><p class="eyebrow">DETALHES</p><h2 id="details-title"></h2></div><button type="button" class="icon-button dialog-close" data-close-dialog="details-dialog" aria-label="Fechar">×</button></div><div id="details-content" class="details-content"></div><div class="dialog-actions dialog-actions-split"><div><button id="detail-delete" type="button" class="button button-danger-quiet">Excluir</button><button id="detail-toggle" type="button" class="button button-outline">Concluir</button></div><div><button type="button" class="button button-outline" data-close-dialog="details-dialog">Fechar</button><button id="detail-edit" type="button" class="button button-primary">Editar</button></div></div></div>
+  </dialog>
+
+  <script>
+    window.setTimeout(() => {
+      if (window.__RAIZ_APP_READY) return;
+      const screen = document.getElementById('boot-screen');
+      const message = document.getElementById('boot-message');
+      if (screen && message) {
+        message.textContent = 'A agenda não carregou. Confira se a pasta /js foi enviada ao GitHub e tente atualizar a página.';
+        screen.classList.add('boot-error');
+      }
+    }, 7000);
+  </script>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
