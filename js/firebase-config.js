@@ -12,4 +12,5 @@ export const firebaseConfig = {
 
 // Web Push VAPID: cole a chave pública gerada com `npx web-push generate-vapid-keys`.
 // A chave privada deve ficar somente no Secret Manager do Firebase, nunca neste arquivo.
-export const webPushPublicKey = "COLE_A_CHAVE_PUBLICA_VAPID_AQUI";
+export const webPushPublicKey =
+  "BE8AD3IifbLNbDo_vWVLbMczcg7spDhioRuMrS5ghUc2e1sg3jb3sADgWrUOfPdlWNOqrl9KvRNCN0z2J9LmP3s";
