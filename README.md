@@ -54,11 +54,14 @@ Envie **todo o conteúdo desta pasta**, incluindo `js/` e `assets/`, para a raiz
 - Edição, conclusão/reabertura, detalhes e exclusão persistidos no Firestore.
 - Busca por título, observações ou categoria e filtros por categoria e estado.
 - Entrada rápida para `hoje`, `amanhã`, `depois de amanhã`, `dia 14/11` e horários como `14h` e `15:30`.
+- Entrada por voz em português brasileiro nos navegadores compatíveis: a fala é transcrita e enviada ao mesmo interpretador da entrada rápida; depois de salvar, a agenda confirma o compromisso por voz.
 - Alertas de proximidade na lista lateral; os dados exibidos vêm da conta autenticada.
 - Lembretes locais: clique em **Ativar avisos** e escolha o prazo ao criar cada compromisso. Com a agenda aberta, aparece um cartão visual no prazo escolhido e outro no início do compromisso; cada cartão pode ser fechado e desaparece sozinho após 5 minutos. Um toque suave de cerca de 5 segundos acompanha os avisos.
 - Logo SVG própria, paleta verde, modo escuro e layout responsivo.
 
 Os lembretes locais funcionam neste aparelho enquanto a agenda estiver aberta e visível. Eles não precisam do plano Blaze, mas não são enviados se a agenda estiver fechada ou suspensa pelo navegador. A permissão do navegador é separada do cartão visual dentro da página.
+
+O reconhecimento de voz depende do navegador e da conexão. Alguns navegadores enviam o áudio ao serviço de reconhecimento para transcrevê-lo; o app não grava nem salva o áudio. Inicie a captação apenas quando for seguro e respeite as regras locais de direção.
 
 ## Notificações push em segundo plano (opcional)
 

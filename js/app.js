@@ -15,6 +15,8 @@ const $ = (selector) => document.querySelector(selector);
 const authView = $("#auth-view"), appView = $("#app-view"), bootScreen = $("#boot-screen");
 let authMode = "login", currentUser = null, events = [], unsubscribeEvents = null;
 let activeView = "month", cursorDate = new Date(), focusedEventId = null, editingEventId = null;
+let voiceRecognition = null, voiceSubmissionPending = false;
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 bootScreen.classList.add("is-hidden");
 showAuthView();
@@ -38,6 +40,15 @@ function showToast(message, isError = false) {
   node.textContent = message;
   $("#toast-region").append(node);
   window.setTimeout(() => node.remove(), 4200);
+}
+
+function speakVoiceFeedback(message) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = "pt-BR";
+  utterance.rate = 1;
+  window.speechSynthesis.speak(utterance);
 }
 
 function setSyncState(state, label) {
@@ -270,14 +281,87 @@ $("#event-form").addEventListener("submit", async (event) => {
   }
 });
 
+const voiceButton = $("#voice-entry-button");
+if (!SpeechRecognitionAPI) {
+  voiceButton.disabled = true;
+  voiceButton.title = "Reconhecimento de voz não está disponível neste navegador. Você pode digitar o compromisso.";
+}
+
+voiceButton.addEventListener("click", () => {
+  if (voiceRecognition) {
+    voiceRecognition.stop();
+    return;
+  }
+  if (!SpeechRecognitionAPI) {
+    showToast("Este navegador não oferece reconhecimento de voz. Digite o compromisso na entrada rápida.", true);
+    return;
+  }
+  if (!window.isSecureContext) {
+    showToast("O microfone exige HTTPS. Abra a agenda pelo endereço publicado ou pelo localhost.", true);
+    return;
+  }
+
+  const recognition = new SpeechRecognitionAPI();
+  voiceRecognition = recognition;
+  recognition.lang = "pt-BR";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    voiceButton.classList.add("is-listening");
+    voiceButton.setAttribute("aria-label", "Parar de ouvir");
+    voiceButton.title = "Ouvindo. Toque novamente para parar.";
+    const feedback = $("#quick-feedback");
+    feedback.textContent = "Ouvindo… fale o compromisso em uma frase. Toque no microfone para parar.";
+    feedback.classList.remove("is-error");
+    feedback.hidden = false;
+    showToast("A fala é processada pelo navegador; alguns navegadores enviam o áudio ao serviço de reconhecimento.");
+  };
+  recognition.onresult = (resultEvent) => {
+    const result = resultEvent.results[resultEvent.resultIndex];
+    const transcript = result?.[0]?.transcript?.trim();
+    if (!transcript || !result.isFinal) return;
+    $("#quick-input").value = transcript;
+    voiceSubmissionPending = true;
+    $("#quick-form").requestSubmit();
+  };
+  recognition.onerror = (errorEvent) => {
+    if (errorEvent.error === "aborted") return;
+    const message = errorEvent.error === "not-allowed"
+      ? "O acesso ao microfone foi bloqueado. Permita o microfone nas configurações do navegador."
+      : errorEvent.error === "no-speech"
+        ? "Não ouvi a fala. Tente novamente em um lugar mais silencioso."
+        : errorEvent.error === "network"
+          ? "O reconhecimento de voz precisa de conexão com a internet neste navegador."
+          : "Não consegui reconhecer a fala. Você pode digitar o compromisso.";
+    showToast(message, true);
+    speakVoiceFeedback(message);
+  };
+  recognition.onend = () => {
+    voiceRecognition = null;
+    voiceButton.classList.remove("is-listening");
+    voiceButton.setAttribute("aria-label", "Criar compromisso por voz");
+    voiceButton.title = "Falar um compromisso";
+  };
+  try {
+    recognition.start();
+  } catch (error) {
+    voiceRecognition = null;
+    voiceButton.classList.remove("is-listening");
+    showToast("Não consegui iniciar o microfone. Confira a permissão do navegador.", true);
+  }
+});
+
 $("#quick-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const voiceEntry = voiceSubmissionPending;
+  voiceSubmissionPending = false;
   const input = $("#quick-input"), feedback = $("#quick-feedback"), parsed = parseQuickEntry(input.value);
   feedback.classList.remove("is-error");
   if (!parsed) {
     feedback.textContent = "Não encontrei a data. Use “amanhã”, “hoje” ou “dia 14/11”; para datas diferentes, use Novo compromisso.";
     feedback.classList.add("is-error");
     feedback.hidden = false;
+    if (voiceEntry) speakVoiceFeedback("Não consegui encontrar a data. Diga, por exemplo, amanhã reunião às 14 horas.");
     return;
   }
   try {
@@ -286,12 +370,17 @@ $("#quick-form").addEventListener("submit", async (event) => {
     feedback.hidden = false;
     input.value = "";
     showToast("Compromisso salvo na sua agenda.");
+    if (voiceEntry) {
+      const dateText = formatDate(parsed.date, { weekday: "long", day: "numeric", month: "long" });
+      speakVoiceFeedback(`Agendado: ${parsed.title}, ${dateText}${parsed.time ? ` às ${parsed.time}` : ""}.`);
+    }
   } catch (error) {
     console.error("Entrada rápida:", error.code, error.message);
     feedback.textContent = firestoreErrorMessage(error.code);
     feedback.classList.add("is-error");
     feedback.hidden = false;
     showToast("O compromisso não foi salvo.", true);
+    if (voiceEntry) speakVoiceFeedback("Não consegui salvar o compromisso. Tente novamente quando puder.");
   }
 });
 

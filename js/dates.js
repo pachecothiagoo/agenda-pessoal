@@ -91,7 +91,7 @@ export function parseQuickEntry(input, now = new Date()) {
   }
   if (!date || Number.isNaN(date.getTime())) return null;
 
-  const timeMatch = /\b(?:às?\s*)?(\d{1,2})(?:\s*(?:h|hr|hrs|:)(\d{2})?)\b/i.exec(text);
+  const timeMatch = /\b(?:às?\s*)?(\d{1,2})(?:\s*(?:horas?|hrs?|h|:)(\d{2})?)?\b/i.exec(text);
   let time = "";
   if (timeMatch) {
     const hour = Number(timeMatch[1]);
