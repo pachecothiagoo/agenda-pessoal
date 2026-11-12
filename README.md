@@ -55,3 +55,9 @@ Envie **todo o conteúdo desta pasta**, incluindo `js/` e `assets/`, para a raiz
 - Entrada rápida para `hoje`, `amanhã`, `depois de amanhã`, `dia 14/11` e horários como `14h` e `15:30`.
 - Alertas de proximidade na lista lateral; os dados exibidos vêm da conta autenticada.
 - Logo SVG própria, paleta verde, modo escuro e layout responsivo.
+
+## Notificações push
+
+Para gerar o par de chaves, rode `npx --yes web-push generate-vapid-keys`. Coloque a chave pública em `js/firebase-config.js` e `functions/index.js` (os valores devem ser iguais). Guarde a chave privada como segredo, sem enviá-la ao GitHub: `firebase functions:secrets:set WEB_PUSH_VAPID_PRIVATE_KEY`. Depois rode `npm install --prefix functions` e `firebase deploy --only functions,firestore:rules,firestore:indexes`.
+
+O agendador do Firebase exige plano Blaze e conta de faturamento, podendo gerar cobranças. No iPhone/iPad, Web Push requer iOS/iPadOS 16.4 ou posterior e o site adicionado à Tela de Início pelo Safari.

@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f6f7f2" />
   <meta name="description" content="Uma agenda pessoal simples, cuidadosa e sincronizada." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Raiz" />
   <title>Raiz — agenda pessoal</title>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
   <link rel="icon" type="image/svg+xml" href="./assets/raiz-mark.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
@@ -70,7 +73,7 @@
     <main class="main-content">
       <header class="page-heading">
         <div><p id="today-label" class="eyebrow"></p><h1>Um dia de cada vez.</h1><p class="page-subtitle">Seus planos, organizados com leveza.</p></div>
-        <button id="mobile-new-event" class="button button-primary mobile-new-event" type="button"><span aria-hidden="true">+</span> Novo</button>
+        <div class="heading-actions"><button id="notifications-button" class="button button-outline notifications-button" type="button">Ativar avisos</button><button id="mobile-new-event" class="button button-primary mobile-new-event" type="button"><span aria-hidden="true">+</span> Novo</button></div>
       </header>
 
       <form id="quick-form" class="quick-entry" autocomplete="off">
@@ -108,6 +111,7 @@
       <label class="field-label" for="event-title">O que você vai fazer?<input id="event-title" name="title" maxlength="160" placeholder="Ex.: Alinhamento com a equipe" required /></label>
       <div class="form-row"><label class="field-label" for="event-date">Data<input id="event-date" name="date" type="date" required /></label><label class="field-label" for="event-time">Horário<input id="event-time" name="time" type="time" /></label></div>
       <div class="form-row"><label class="field-label" for="event-duration">Duração<select id="event-duration" name="duration"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="90">1 hora e 30</option><option value="120">2 horas</option><option value="240">Meio período</option></select></label><label class="field-label" for="event-category">Categoria<select id="event-category" name="category"><option value="Pessoal">Pessoal</option><option value="Trabalho">Trabalho</option><option value="Saúde">Saúde</option><option value="Estudos">Estudos</option><option value="Família">Família</option><option value="Outro">Outro</option></select></label></div>
+      <label class="field-label" for="event-reminder">Avisar<select id="event-reminder" name="reminderMinutes"><option value="0">Na hora</option><option value="5">5 minutos antes</option><option value="10" selected>10 minutos antes</option><option value="15">15 minutos antes</option><option value="30">30 minutos antes</option><option value="60">1 hora antes</option><option value="1440">1 dia antes</option></select></label>
       <label class="field-label" for="event-notes">Observações <span class="optional-label">opcional</span><textarea id="event-notes" name="notes" rows="3" maxlength="1000" placeholder="Um detalhe para lembrar depois"></textarea></label>
       <p id="event-form-error" class="form-error" role="alert" hidden></p>
       <div class="dialog-actions"><button type="button" class="button button-outline" data-close-dialog="event-dialog">Cancelar</button><button id="event-save" class="button button-primary" type="submit">Salvar compromisso</button></div>

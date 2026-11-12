@@ -9,3 +9,7 @@ export const firebaseConfig = {
   appId: "1:791815258913:web:38bd3252e880387c743460",
   measurementId: "G-PPC22GYD97",
 };
+
+// Web Push VAPID: cole a chave pública gerada com `npx web-push generate-vapid-keys`.
+// A chave privada deve ficar somente no Secret Manager do Firebase, nunca neste arquivo.
+export const webPushPublicKey = "COLE_A_CHAVE_PUBLICA_VAPID_AQUI";

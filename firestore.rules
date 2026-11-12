@@ -10,7 +10,8 @@ service cloud.firestore {
       function validBaseFields(data) {
         return data.keys().hasOnly([
           'title', 'date', 'time', 'duration', 'category', 'notes',
-          'done', 'createdAt', 'updatedAt'
+          'done', 'createdAt', 'updatedAt', 'reminderMinutes', 'eventAt',
+          'reminderAt', 'reminderSentAt', 'reminderClaimedAt'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -23,6 +24,11 @@ service cloud.firestore {
         && (!('category' in data) || (data.category is string && data.category.size() <= 40))
         && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
         && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('reminderMinutes' in data) || data.reminderMinutes in [0, 5, 10, 15, 30, 60, 1440])
+        && (!('eventAt' in data) || data.eventAt is timestamp)
+        && (!('reminderAt' in data) || data.reminderAt is timestamp)
+        && (!('reminderSentAt' in data) || data.reminderSentAt == null || data.reminderSentAt is timestamp)
+        && (!('reminderClaimedAt' in data) || data.reminderClaimedAt == null || data.reminderClaimedAt is timestamp)
         && data.updatedAt is timestamp;
       }
 
@@ -33,6 +39,30 @@ service cloud.firestore {
         && request.resource.data.createdAt is timestamp;
       allow update: if ownsUserData()
         && validBaseFields(request.resource.data);
+    }
+
+    // Assinaturas Web Push pertencem apenas ao usuário autenticado.
+    match /users/{userId}/devices/{deviceId} {
+      function ownsUserData() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      function validDevice(data) {
+        return data.keys().hasOnly(['endpoint', 'p256dh', 'auth', 'platform', 'updatedAt'])
+          && data.keys().hasAll(['endpoint', 'p256dh', 'auth', 'updatedAt'])
+          && data.endpoint is string
+          && data.endpoint.size() > 0
+          && data.endpoint.size() <= 2048
+          && data.p256dh is string
+          && data.p256dh.size() > 0
+          && data.p256dh.size() <= 256
+          && data.auth is string
+          && data.auth.size() > 0
+          && data.auth.size() <= 256
+          && (!('platform' in data) || (data.platform is string && data.platform.size() <= 200))
+          && data.updatedAt is timestamp;
+      }
+      allow read, delete: if ownsUserData();
+      allow create, update: if ownsUserData() && validDevice(request.resource.data);
     }
   }
 }

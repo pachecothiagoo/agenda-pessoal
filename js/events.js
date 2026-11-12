@@ -7,12 +7,33 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  Timestamp,
+  getDoc,
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 import { isISODate } from "./dates.js";
 
 const eventCollection = (uid) => collection(db, "users", uid, "events");
+const reminderOptions = [0, 5, 10, 15, 30, 60, 1440];
+
+function makeReminderTimes(event) {
+  const [year, month, day] = event.date.split("-").map(Number);
+  const [hour, minute] = (event.time || "09:00").split(":").map(Number);
+  const eventDate = new Date(year, month - 1, day, hour, minute || 0, 0, 0);
+  const reminderMinutes = Number(event.reminderMinutes ?? 10);
+  if (!Number.isInteger(reminderMinutes) || !reminderOptions.includes(reminderMinutes)) {
+    throw new Error("Escolha um prazo de lembrete válido.");
+  }
+  const reminderDate = new Date(eventDate.getTime() - reminderMinutes * 60_000);
+  return {
+    reminderMinutes,
+    eventAt: Timestamp.fromDate(eventDate),
+    reminderAt: Timestamp.fromDate(reminderDate),
+    reminderSentAt: null,
+    reminderClaimedAt: null,
+  };
+}
 
 export function watchEvents(uid, onData, onError) {
   const eventsQuery = query(eventCollection(uid), orderBy("date", "asc"));
@@ -43,12 +64,14 @@ function validateEvent(event) {
     duration,
     category: event.category || "Pessoal",
     notes: event.notes || "",
+    reminderMinutes: Number(event.reminderMinutes ?? 10),
   };
 }
 
 export function createEvent(uid, event) {
   return addDoc(eventCollection(uid), {
     ...validateEvent(event),
+    ...makeReminderTimes(event),
     done: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -66,7 +89,35 @@ export function changeEvent(uid, id, updates) {
     if (current.category !== undefined && (typeof current.category !== "string" || current.category.length > 40)) throw new Error("Escolha uma categoria válida.");
     if (current.notes !== undefined && (typeof current.notes !== "string" || current.notes.length > 1000)) throw new Error("As observações podem ter no máximo 1.000 caracteres.");
   }
-  return updateDoc(doc(db, "users", uid, "events", id), { ...safeUpdates, updatedAt: serverTimestamp() });
+  const reference = doc(db, "users", uid, "events", id);
+  return (async () => {
+    const scheduleChanged = ["date", "time", "reminderMinutes"].some((field) => field in safeUpdates);
+    if (scheduleChanged || safeUpdates.done === false) {
+      const snapshot = await getDoc(reference);
+      if (!snapshot.exists()) throw new Error("Esse compromisso não existe mais.");
+      const merged = { ...snapshot.data(), ...safeUpdates };
+      if (scheduleChanged || (!merged.reminderAt && !merged.done)) {
+        Object.assign(safeUpdates, makeReminderTimes(merged));
+      }
+    }
+    return updateDoc(reference, { ...safeUpdates, updatedAt: serverTimestamp() });
+  })();
+}
+
+export async function backfillEventReminders(uid, items) {
+  const migrationKey = `raiz-reminders-migrated-${uid}`;
+  if (sessionStorage.getItem(migrationKey) === "done") return;
+  sessionStorage.setItem(migrationKey, "done");
+  const missing = items.filter((event) => !event.reminderAt);
+  const results = await Promise.allSettled(missing.map((event) => {
+    if (!isISODate(event.date)) return Promise.resolve();
+    return changeEvent(uid, event.id, {
+      date: event.date,
+      time: event.time || "",
+      reminderMinutes: Number(event.reminderMinutes ?? 10),
+    });
+  }));
+  if (results.some((result) => result.status === "rejected")) sessionStorage.removeItem(migrationKey);
 }
 
 export function removeEvent(uid, id) {

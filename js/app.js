@@ -5,7 +5,8 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { auth } from "./firebase.js";
-import { watchEvents, createEvent, changeEvent, removeEvent } from "./events.js";
+import { watchEvents, createEvent, changeEvent, removeEvent, backfillEventReminders } from "./events.js";
+import { enablePushForUser } from "./notifications.js";
 import { renderCalendar, calendarTitle } from "./calendar.js";
 import { alertInfo, addDays, addMonths, dateFromISO, dayDistance, formatDate, isISODate, localISODate, parseQuickEntry } from "./dates.js";
 
@@ -105,6 +106,7 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
   showAppView();
+  updateNotificationButton();
   $("#user-label").textContent = user.email || "Conta conectada";
   $("#today-label").textContent = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   setSyncState("syncing", "Conectando…");
@@ -112,11 +114,15 @@ onAuthStateChanged(auth, (user) => {
     events = items;
     setSyncState("ok", "Sincronizado");
     renderAll();
+    backfillEventReminders(user.uid, items).catch((error) => console.warn("Preparar lembretes antigos:", error));
   }, (error) => {
     console.error("Firestore:", error.code, error.message);
     setSyncState("error", "Falha na sincronização");
     showToast(firestoreErrorMessage(error.code), true);
   });
+  if ("Notification" in window && Notification.permission === "granted" && localStorage.getItem(`raiz-push-enabled-${user.uid}`) === "true") {
+    enablePushForUser(user).catch((error) => console.warn("Restaurar notificações:", error));
+  }
 }, (error) => {
   console.error("Firebase Auth state:", error.code, error.message);
   showAuthView();
@@ -130,6 +136,35 @@ function firestoreErrorMessage(code) {
   if (code === "unavailable" || code === "deadline-exceeded") return "Sem conexão com o Firestore. A agenda tentará sincronizar novamente.";
   return `Não foi possível carregar os compromissos (${code || "erro"}). Confira as regras do Firestore.`;
 }
+
+function updateNotificationButton() {
+  const button = $("#notifications-button");
+  const enabled = currentUser && "Notification" in window && "serviceWorker" in navigator
+    && Notification.permission === "granted"
+    && localStorage.getItem(`raiz-push-enabled-${currentUser.uid}`) === "true";
+  button.textContent = enabled ? "Avisos ativos neste aparelho" : "Ativar avisos";
+  button.title = !(("Notification" in window) && ("serviceWorker" in navigator))
+    ? "Este navegador não oferece notificações push."
+    : "Ativar notificações neste aparelho";
+  button.disabled = Boolean(enabled);
+}
+
+$("#notifications-button").addEventListener("click", async () => {
+  const button = $("#notifications-button");
+  if (!currentUser) return;
+  button.disabled = true;
+  button.textContent = "Ativando…";
+  try {
+    await enablePushForUser(currentUser);
+    localStorage.setItem(`raiz-push-enabled-${currentUser.uid}`, "true");
+    showToast("Avisos ativados neste aparelho.");
+  } catch (error) {
+    console.error("Ativar notificações:", error);
+    showToast(error.message || "Não foi possível ativar as notificações.", true);
+  } finally {
+    updateNotificationButton();
+  }
+});
 
 $("#signout-button").addEventListener("click", () => signOut(auth).catch((error) => showToast(authErrorMessage(error.code), true)));
 
@@ -195,6 +230,7 @@ function openEventDialog({ event = null, date = localISODate(), time = "" } = {}
   $("#event-date").value = event?.date || date;
   $("#event-time").value = event?.time || time;
   $("#event-duration").value = String(event?.duration || 60);
+  $("#event-reminder").value = String(event?.reminderMinutes ?? 10);
   $("#event-category").value = event?.category || "Pessoal";
   $("#event-notes").value = event?.notes || "";
   $("#event-form-error").hidden = true;
@@ -210,8 +246,9 @@ $("#event-form").addEventListener("submit", async (event) => {
   const title = $("#event-title").value.trim(), date = $("#event-date").value;
   const time = $("#event-time").value, duration = Number($("#event-duration").value);
   const category = $("#event-category").value, notes = $("#event-notes").value.trim();
+  const reminderMinutes = Number($("#event-reminder").value);
   const errorBox = $("#event-form-error"), saveButton = $("#event-save");
-  if (!title || title.length > 160 || !isISODate(date) || !Number.isInteger(duration) || duration < 15 || duration > 480 || notes.length > 1000) {
+  if (!title || title.length > 160 || !isISODate(date) || !Number.isInteger(duration) || duration < 15 || duration > 480 || notes.length > 1000 || !Number.isInteger(reminderMinutes)) {
     errorBox.textContent = "Confira o título, a data e a duração do compromisso.";
     errorBox.hidden = false;
     return;
@@ -220,7 +257,7 @@ $("#event-form").addEventListener("submit", async (event) => {
   saveButton.textContent = "Salvando…";
   setSyncState("syncing", "Salvando…");
   try {
-    const data = { title, date, time, duration, category, notes };
+    const data = { title, date, time, duration, category, notes, reminderMinutes };
     if (editingEventId) await changeEvent(currentUser.uid, editingEventId, data);
     else await createEvent(currentUser.uid, data);
     $("#event-dialog").close();
