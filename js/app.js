@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { auth } from "./firebase.js";
 import { watchEvents, createEvent, changeEvent, removeEvent, backfillEventReminders } from "./events.js";
-import { enablePushForUser } from "./notifications.js";
+import { activateLocalReminders, setReminderEvents, stopReminderChecks } from "./local-reminders.js";
 import { renderCalendar, calendarTitle } from "./calendar.js";
 import { alertInfo, addDays, addMonths, dateFromISO, dayDistance, formatDate, isISODate, localISODate, parseQuickEntry } from "./dates.js";
 
@@ -102,6 +102,7 @@ onAuthStateChanged(auth, (user) => {
   }
   if (!user) {
     events = [];
+    stopReminderChecks();
     showAuthView();
     return;
   }
@@ -112,6 +113,7 @@ onAuthStateChanged(auth, (user) => {
   setSyncState("syncing", "Conectando…");
   unsubscribeEvents = watchEvents(user.uid, (items) => {
     events = items;
+    setReminderEvents(user.uid, items);
     setSyncState("ok", "Sincronizado");
     renderAll();
     backfillEventReminders(user.uid, items).catch((error) => console.warn("Preparar lembretes antigos:", error));
@@ -120,9 +122,6 @@ onAuthStateChanged(auth, (user) => {
     setSyncState("error", "Falha na sincronização");
     showToast(firestoreErrorMessage(error.code), true);
   });
-  if ("Notification" in window && Notification.permission === "granted" && localStorage.getItem(`raiz-push-enabled-${user.uid}`) === "true") {
-    enablePushForUser(user).catch((error) => console.warn("Restaurar notificações:", error));
-  }
 }, (error) => {
   console.error("Firebase Auth state:", error.code, error.message);
   showAuthView();
@@ -139,13 +138,9 @@ function firestoreErrorMessage(code) {
 
 function updateNotificationButton() {
   const button = $("#notifications-button");
-  const enabled = currentUser && "Notification" in window && "serviceWorker" in navigator
-    && Notification.permission === "granted"
-    && localStorage.getItem(`raiz-push-enabled-${currentUser.uid}`) === "true";
+  const enabled = currentUser && localStorage.getItem(`raiz-local-alerts-${currentUser.uid}`) === "true";
   button.textContent = enabled ? "Avisos ativos neste aparelho" : "Ativar avisos";
-  button.title = !(("Notification" in window) && ("serviceWorker" in navigator))
-    ? "Este navegador não oferece notificações push."
-    : "Ativar notificações neste aparelho";
+  button.title = "Ativa avisos visuais e sonoros enquanto a agenda estiver aberta neste aparelho.";
   button.disabled = Boolean(enabled);
 }
 
@@ -155,11 +150,11 @@ $("#notifications-button").addEventListener("click", async () => {
   button.disabled = true;
   button.textContent = "Ativando…";
   try {
-    await enablePushForUser(currentUser);
-    localStorage.setItem(`raiz-push-enabled-${currentUser.uid}`, "true");
-    showToast("Avisos ativados neste aparelho.");
+    await activateLocalReminders(currentUser.uid);
+    updateNotificationButton();
+    showToast("Avisos locais ativados. Eles funcionam enquanto a agenda estiver aberta neste aparelho.");
   } catch (error) {
-    console.error("Ativar notificações:", error);
+    console.error("Ativar avisos locais:", error);
     showToast(error.message || "Não foi possível ativar as notificações.", true);
   } finally {
     updateNotificationButton();

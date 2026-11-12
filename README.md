@@ -18,7 +18,8 @@ agenda-pessoal/
     ├── dates.js
     ├── events.js
     ├── firebase.js
-    └── firebase-config.js
+    ├── firebase-config.js
+    └── local-reminders.js
 ```
 
 ## Configuração Firebase
@@ -54,10 +55,13 @@ Envie **todo o conteúdo desta pasta**, incluindo `js/` e `assets/`, para a raiz
 - Busca por título, observações ou categoria e filtros por categoria e estado.
 - Entrada rápida para `hoje`, `amanhã`, `depois de amanhã`, `dia 14/11` e horários como `14h` e `15:30`.
 - Alertas de proximidade na lista lateral; os dados exibidos vêm da conta autenticada.
+- Lembretes locais: clique em **Ativar avisos** e escolha o prazo ao criar cada compromisso. Com a agenda aberta, aparece um cartão visual no prazo escolhido e outro no início do compromisso; cada cartão pode ser fechado e desaparece sozinho após 5 minutos. Um toque suave de cerca de 5 segundos acompanha os avisos.
 - Logo SVG própria, paleta verde, modo escuro e layout responsivo.
 
-## Notificações push
+Os lembretes locais funcionam neste aparelho enquanto a agenda estiver aberta e visível. Eles não precisam do plano Blaze, mas não são enviados se a agenda estiver fechada ou suspensa pelo navegador. A permissão do navegador é separada do cartão visual dentro da página.
 
-Para gerar o par de chaves, rode `npx --yes web-push generate-vapid-keys`. Coloque a chave pública em `js/firebase-config.js` e `functions/index.js` (os valores devem ser iguais). Guarde a chave privada como segredo, sem enviá-la ao GitHub: `firebase functions:secrets:set WEB_PUSH_VAPID_PRIVATE_KEY`. Depois rode `npm install --prefix functions` e `firebase deploy --only functions,firestore:rules,firestore:indexes`.
+## Notificações push em segundo plano (opcional)
 
-O agendador do Firebase exige plano Blaze e conta de faturamento, podendo gerar cobranças. No iPhone/iPad, Web Push requer iOS/iPadOS 16.4 ou posterior e o site adicionado à Tela de Início pelo Safari.
+O envio quando a agenda está fechada é um recurso separado e opcional. Para habilitá-lo, gere um par de chaves com `npx --yes web-push generate-vapid-keys`, coloque a chave pública em `js/firebase-config.js` e `functions/index.js` (os valores devem ser iguais) e guarde a chave privada como segredo, sem enviá-la ao GitHub: `firebase functions:secrets:set WEB_PUSH_VAPID_PRIVATE_KEY`. Depois rode `npm install --prefix functions` e `firebase deploy --only functions,firestore:rules,firestore:indexes`.
+
+As Cloud Functions agendadas exigem o plano Blaze e uma conta de faturamento, podendo gerar cobranças. No iPhone/iPad, Web Push requer iOS/iPadOS 16.4 ou posterior e o site adicionado à Tela de Início pelo Safari.
